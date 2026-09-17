@@ -24,43 +24,51 @@ class ImportController extends Controller
         $file = $request->file('file_excel');
         $maxAttempts = 10;
 
-        return DB::transaction(function () use ($file, $maxAttempts) {
-            $datePrefix = now()->format('Ymd');
+        try {
+            return DB::transaction(function () use ($file, $maxAttempts) {
+                $datePrefix = now()->format('Ymd');
 
-            $uploadVersion = null;
-            for ($i = 0; $i < $maxAttempts; $i++) {
-                $suffix = str_pad($i + 1, 2, '0', STR_PAD_LEFT);
-                $candidate = $datePrefix . '-' . $suffix;
+                $uploadVersion = null;
+                for ($i = 0; $i < $maxAttempts; $i++) {
+                    $suffix = str_pad($i + 1, 2, '0', STR_PAD_LEFT);
+                    $candidate = $datePrefix . '-' . $suffix;
 
-                $existing = DB::table('data_label_sbsite')
-                    ->where('upload_version', $candidate)
-                    ->lockForUpdate()
-                    ->first();
+                    $existing = DB::table('data_label_sbsite')
+                        ->where('upload_version', $candidate)
+                        ->orderBy('id')
+                        ->lockForUpdate()
+                        ->first();
 
-                if (!$existing) {
-                    $uploadVersion = $candidate;
-                    break;
+                    if (!$existing) {
+                        $uploadVersion = $candidate;
+                        break;
+                    }
                 }
-            }
 
-            if (!$uploadVersion) {
-                $uploadVersion = $datePrefix . '-' . str_pad(mt_rand(10, 99), 2, '0', STR_PAD_LEFT);
-            }
+                if (!$uploadVersion) {
+                    $uploadVersion = $datePrefix . '-' . str_pad(mt_rand(10, 99), 2, '0', STR_PAD_LEFT);
+                }
 
-            DB::table('data_label_sbsite')->where('upload_version', $uploadVersion)->delete();
+                DB::table('data_label_sbsite')->where('upload_version', $uploadVersion)->delete();
 
-            $import = new DataLabelSbsiteImport($uploadVersion);
-            Excel::import($import, $file);
+                $import = new DataLabelSbsiteImport($uploadVersion);
+                Excel::import($import, $file);
 
-            $total = DataLabelSbsite::where('upload_version', $uploadVersion)->count();
+                $total = DataLabelSbsite::where('upload_version', $uploadVersion)->count();
 
+                return response()->json([
+                    'success' => true,
+                    'message' => "Import berhasil! {$total} baris data dimasukkan untuk upload_version {$uploadVersion}.",
+                    'total' => $total,
+                    'version' => $uploadVersion,
+                ]);
+            });
+        } catch (\Exception $e) {
             return response()->json([
-                'success' => true,
-                'message' => "Import berhasil! {$total} baris data dimasukkan untuk upload_version {$uploadVersion}.",
-                'total' => $total,
-                'version' => $uploadVersion,
-            ]);
-        });
+                'success' => false,
+                'message' => 'Import gagal: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function preview(Request $request)

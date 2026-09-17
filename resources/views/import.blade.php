@@ -82,7 +82,8 @@
         const formData = new FormData();
         formData.append('file_excel', file);
         try {
-            const res = await fetch('/import/preview', { method: 'POST', body: formData });
+            const res = await fetch('/import/preview', { method: 'POST', body: formData, headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') } });
+            if (!res.ok) { throw new Error('Server error (' + res.status + ')'); }
             const data = await res.json();
             if (!data.success) { showAlert('<i class="bi bi-x-circle"></i> ' + data.message, 'error'); return; }
             previewRow.style.display = 'block';
@@ -111,7 +112,11 @@
         const formData = new FormData();
         formData.append('file_excel', file);
         try {
-            const res = await fetch('/import', { method: 'POST', body: formData });
+            const res = await fetch('/import', { method: 'POST', body: formData, headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') } });
+            if (!res.ok) {
+                const txt = await res.text();
+                throw new Error('Server error (' + res.status + ')');
+            }
             const data = await res.json();
             btnImport.disabled = false;
             spinnerImport.style.display = 'none';
