@@ -180,7 +180,7 @@ php artisan view:clear     # Clear compiled views
 php artisan config:clear   # Clear config cache
 php artisan cache:clear    # Clear application cache
 php artisan route:clear    # Clear route cache
-php -l app/Http/Controllers/ImportController.php  # Check PHP syntax
+php -l app/Http/Controllers/ImportController.php  # Check PHP syntax (Linux/macOS)
 ```
 
 ---
@@ -213,7 +213,7 @@ php -l app/Http/Controllers/ImportController.php  # Check PHP syntax
 
 - CSRF protection is enabled on all POST routes (Laravel `VerifyCsrfToken` middleware)
 - All AJAX requests include `X-CSRF-TOKEN` header from `<meta name="csrf-token">`
-- File uploads validate MIME type (`.xlsx`, `.xls`, `.csv`) and max size (10MB)
+- File uploads validate MIME type (`.xlsx`, `.xls`, `.csv`, `.txt`) and max size (10MB) — `.txt` accepted as CSV on Windows where `text/plain` is detected
 - Database operations use transactions with row-level locking for concurrent safety
 
 ---

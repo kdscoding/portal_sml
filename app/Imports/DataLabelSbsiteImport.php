@@ -17,7 +17,7 @@ class DataLabelSbsiteImport implements ToModel, WithHeadingRow, WithBatchInserts
         $this->uploadVersion = $uploadVersion;
     }
 
-    public function model(array $row)
+    public function model(array $row): ?DataLabelSbsite
     {
         return new DataLabelSbsite([
             'no_urut'        => $row['no_urut'] ?? null,

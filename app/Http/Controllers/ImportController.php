@@ -18,7 +18,7 @@ class ImportController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'file_excel' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+            'file_excel' => 'required|file|mimes:xlsx,xls,csv,txt|max:10240',
         ]);
 
         $file = $request->file('file_excel');
@@ -74,13 +74,13 @@ class ImportController extends Controller
     public function preview(Request $request)
     {
         $request->validate([
-            'file_excel' => 'required|file|mimes:xlsx,xls,csv',
+            'file_excel' => 'required|file|mimes:xlsx,xls,csv,txt',
         ]);
 
         $file = $request->file('file_excel');
 
         try {
-            $reader = Excel::toArray([], $file);
+            $reader = Excel::toArray(new DataLabelSbsiteImport('preview'), $file);
             $data = $reader[0] ?? [];
 
             $rows = array_slice($data, 0, 50);
