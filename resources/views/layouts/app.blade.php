@@ -862,6 +862,12 @@
                         <i class="bi bi-file-earmark-spreadsheet"></i> Import
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link @if(request()->is('data')) active @endif"
+                       href="/data">
+                        <i class="bi bi-table"></i> Data
+                    </a>
+                </li>
             </ul>
         </div>
     </div>
@@ -882,6 +888,8 @@
         <a href="/inbound-check">Scanning</a>
         <span class="mx-2">·</span>
         <a href="/import">Import</a>
+        <span class="mx-2">·</span>
+        <a href="/data">Data</a>
     </div>
 </footer>
 
