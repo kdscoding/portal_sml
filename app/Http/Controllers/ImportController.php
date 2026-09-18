@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Imports\DataLabelSbsiteImport;
 use App\Models\DataLabelSbsite;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -26,12 +27,12 @@ class ImportController extends Controller
         try {
             return DB::transaction(function () use ($file) {
                 $uploadVersion = $this->generateUniqueVersion();
-                
+
                 $import = new DataLabelSbsiteImport($uploadVersion);
                 Excel::import($import, $file);
 
                 $total = DataLabelSbsite::where('upload_version', $uploadVersion)->count();
-                
+
                 if ($total === 0) {
                     throw new \Exception('Tidak ada data yang berhasil di-import. Periksa format file Excel.');
                 }
@@ -43,10 +44,25 @@ class ImportController extends Controller
                     'version' => $uploadVersion,
                 ]);
             });
-        } catch (\Exception $e) {
+        } catch (QueryException $e) {
+            report($e);
+
+            $message = str_contains($e->getMessage(), 'id_sb_site') && str_contains($e->getMessage(), 'cannot be null')
+                ? 'Kolom Site ID belum diisi. Lengkapi kolom Site ID pada file Excel, lalu unggah kembali.'
+                : 'Data file tidak sesuai. Periksa kembali file Excel, lalu unggah kembali.';
+
             return response()->json([
                 'success' => false,
-                'message' => 'Import gagal: ' . $e->getMessage(),
+                'message' => $message,
+                'error_type' => 'validation',
+            ], 500);
+        } catch (\Exception $e) {
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Periksa kembali format file Excel, lalu unggah kembali.',
+                'error_type' => 'import_error',
             ], 500);
         }
     }
@@ -106,6 +122,7 @@ class ImportController extends Controller
             ->get()
             ->map(function ($v) {
                 $v->percent = $v->total > 0 ? round(($v->scanned / $v->total) * 100) : 0;
+
                 return $v;
             });
 
@@ -141,12 +158,12 @@ class ImportController extends Controller
     {
         try {
             $deleted = DataLabelSbsite::where('upload_version', $version)->delete();
-            
+
             return redirect()->route('data')
                 ->with('success', "Version {$version} berhasil dihapus ({$deleted} records).");
         } catch (\Exception $e) {
             return redirect()->route('data')
-                ->with('error', 'Gagal menghapus version: ' . $e->getMessage());
+                ->with('error', 'Gagal menghapus version: '.$e->getMessage());
         }
     }
 
