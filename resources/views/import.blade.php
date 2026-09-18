@@ -83,8 +83,10 @@
         formData.append('file_excel', file);
         try {
             const res = await fetch('/import/preview', { method: 'POST', body: formData, headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') } });
-            if (!res.ok) { throw new Error('Server error (' + res.status + ')'); }
             const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.message || 'Server error (' + res.status + ')');
+            }
             if (!data.success) { showAlert('<i class="bi bi-x-circle"></i> ' + data.message, 'error'); return; }
             previewRow.style.display = 'block';
             previewInfo.textContent = `Total: ${data.total_rows} (menampilkan 50 baris)`;
@@ -113,11 +115,10 @@
         formData.append('file_excel', file);
         try {
             const res = await fetch('/import', { method: 'POST', body: formData, headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') } });
-            if (!res.ok) {
-                const txt = await res.text();
-                throw new Error('Server error (' + res.status + ')');
-            }
             const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.message || 'Server error (' + res.status + ')');
+            }
             btnImport.disabled = false;
             spinnerImport.style.display = 'none';
             if (!data.success) { showAlert('<i class="bi bi-x-circle"></i> ' + data.message, 'error'); return; }

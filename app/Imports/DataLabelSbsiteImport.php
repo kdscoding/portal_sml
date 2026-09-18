@@ -19,12 +19,16 @@ class DataLabelSbsiteImport implements ToModel, WithHeadingRow, WithBatchInserts
 
     public function model(array $row): ?DataLabelSbsite
     {
+        // Handle different column name variations from various Excel formats
+        $idVendor = $row['id_vendor'] ?? $row['id_from_vendor'] ?? null;
+        $po = $row['po'] ?? $row['po_10'] ?? null;
+        
         return new DataLabelSbsite([
             'no_urut'        => $row['no_urut'] ?? null,
             'upload_version' => $this->uploadVersion,
             'id_sb_site'     => $row['id_sb_site'] ?? null,
-            'id_vendor'      => $row['id_vendor'] ?? null,
-            'po'             => $row['po'] ?? null,
+            'id_vendor'      => $idVendor,
+            'po'             => $po,
             'item'           => $row['item'] ?? null,
             'country'        => $row['country'] ?? null,
             'building'       => $row['building'] ?? null,
