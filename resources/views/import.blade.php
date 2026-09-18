@@ -27,7 +27,7 @@
             </button>
         </div>
 
-        <div id="alert_box" class="mt-2" style="display:none;"></div>
+        <div id="alert_box" class="mt-2" style="display:none;" role="alert" aria-live="polite"></div>
     </div>
 </div>
 
@@ -40,12 +40,6 @@
         </div>
     </div>
 </div>
-
-<div class="card card-dark mt-2" id="result_row" style="display:none;">
-    <div class="card-body" style="padding:0.7rem 1rem;">
-        <div id="result_info" class="alert alert-terminal-success mb-0"></div>
-    </div>
-</div>
 @endsection
 
 @section('scripts')
@@ -56,8 +50,6 @@
     const previewRow = document.getElementById('preview_row');
     const previewTable = document.getElementById('preview_table');
     const previewInfo = document.getElementById('preview_info');
-    const resultRow = document.getElementById('result_row');
-    const resultInfo = document.getElementById('result_info');
     const btnImport = document.getElementById('btn_import');
     const spinnerImport = document.getElementById('spinner_import');
 
@@ -74,6 +66,51 @@
         alertBox.className = type === 'error' ? 'alert alert-terminal-error' : type === 'success' ? 'alert alert-terminal-success' : 'alert alert-terminal-info';
         alertBox.innerHTML = message;
         setTimeout(function() { alertBox.style.display = 'none'; }, 6000);
+    }
+
+    function showImportAlert(type, title, message, details = []) {
+        const alertClass = type === 'success'
+            ? 'alert alert-terminal-success alert-dismissible fade show mt-2'
+            : 'alert alert-terminal-error alert-dismissible fade show mt-2';
+        const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
+
+        alertBox.className = alertClass;
+        alertBox.style.display = 'block';
+        alertBox.replaceChildren();
+
+        const content = document.createElement('div');
+        const heading = document.createElement('div');
+        const iconElement = document.createElement('i');
+        const titleElement = document.createElement('strong');
+        const messageElement = document.createElement('div');
+
+        iconElement.className = `bi ${icon} me-2`;
+        iconElement.setAttribute('aria-hidden', 'true');
+        titleElement.textContent = title;
+        messageElement.textContent = message;
+
+        heading.append(iconElement, titleElement);
+        content.append(heading, messageElement);
+
+        if (details.length > 0) {
+            const detailsElement = document.createElement('ul');
+            detailsElement.className = 'mb-0 mt-1';
+            detailsElement.style.fontSize = '0.85rem';
+            details.forEach((detail) => {
+                const item = document.createElement('li');
+                item.textContent = detail;
+                detailsElement.append(item);
+            });
+            content.append(detailsElement);
+        }
+
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'btn-close';
+        closeButton.setAttribute('data-bs-dismiss', 'alert');
+        closeButton.setAttribute('aria-label', 'Tutup notifikasi');
+
+        alertBox.append(content, closeButton);
     }
 
     async function doPreview() {
@@ -107,31 +144,51 @@
 
     async function doImport() {
         const file = fileInput.files[0];
-        if (!file) { showAlert('<i class="bi bi-exclamation-circle"></i> Pilih file dulu!', 'error'); return; }
+        if (!file) {
+            showImportAlert('error', 'Import gagal', 'Pilih file yang akan di-import terlebih dahulu.');
+            return;
+        }
+
         btnImport.disabled = true;
         spinnerImport.style.display = 'inline-block';
-        resultRow.style.display = 'none';
         const formData = new FormData();
         formData.append('file_excel', file);
+
         try {
-            const res = await fetch('/import', { method: 'POST', body: formData, headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') } });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || 'Server error (' + res.status + ')');
+            const res = await fetch('/import', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+            let data = null;
+            try {
+                data = await res.json();
+            } catch (error) {
+                data = null;
             }
-            btnImport.disabled = false;
-            spinnerImport.style.display = 'none';
-            if (!data.success) { showAlert('<i class="bi bi-x-circle"></i> ' + data.message, 'error'); return; }
-            showAlert('<i class="bi bi-check-circle"></i> <strong>' + data.message + '</strong>', 'success');
-            resultRow.style.display = 'block';
-            resultInfo.innerHTML = `<span class="version-badge-dark">${data.version || ''}</span> — ${data.total} baris di-import.`;
+
+            if (!res.ok || !data || !data.success) {
+                const message = data && data.message
+                    ? data.message
+                    : 'Import gagal diproses. Silakan coba kembali.';
+                showImportAlert('error', 'Import gagal', message);
+                return;
+            }
+
+            showImportAlert('success', 'Import berhasil', 'Data berhasil di-import.', [
+                `Version: ${data.version || '-'}`,
+                `${data.total} baris berhasil disimpan`
+            ]);
             previewRow.style.display = 'none';
             fileInput.value = '';
             fileInfo.textContent = '';
-        } catch (err) {
+        } catch (error) {
+            showImportAlert('error', 'Import gagal', 'Import tidak dapat diproses. Silakan coba kembali.');
+        } finally {
             btnImport.disabled = false;
             spinnerImport.style.display = 'none';
-            showAlert('<i class="bi bi-x-circle"></i> Gagal: ' + err.message, 'error');
         }
     }
 </script>
